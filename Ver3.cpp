@@ -2,118 +2,171 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-void CopyFromBufferInRaggedArray(char** poem, char* buffer,
-                                 size_t SIZE_OF_FILE,
-                                 size_t NUMBER_OF_LINES);
+struct Struct_Poem{
+    char* buffer;
+    char** poem_ptr_array;
+    ssize_t size_of_file;
+    size_t number_of_lines;
+};
 
-void DeleteEnterFromBuffer(char* buffer, size_t SIZE_OF_FILE);
+void CopyFromBufferInRaggedArray(struct Struct_Poem* Poem);
 
-void PrintRaggedArray(char** poem, size_t NUMBER_OF_LINES, FILE* out_file);
+void ReplaceSymbolInBuffer(struct Struct_Poem* Poem,
+                           char sym1,
+                           char sym2);
 
-int CountLines(const char* buffer, size_t SIZE_OF_FILE);
+int PrintRaggedArray(struct Struct_Poem* Poem, const char* name_of_out_file);
+
+ssize_t GetSizeOfFile(const char* filename);
+
+size_t CountSymbol(struct Struct_Poem* Poem, char sym);
+
+int SetPoemStructFromFile(struct Struct_Poem* Poem,
+                          const char* input_filename);
+
+void FreeDataPoem(struct Struct_Poem* Poem);
 
 int main(){
-    int file_descriptor = 0;
-    const char* filename = "poem_orig.txt";
-    struct stat file_info = {};
-
-    int file_descriptor = open(filename, O_RDONLY);
-
-    if (file_descriptor == -1) {
-        fprintf(stderr, "Ошибка открытия файла |%s|", filename);
-        perror("");
-        return 1;
-    }
-
-    if (fstat(file_descriptor, &file_info) == -1){
-        fprintf(stderr, "Ошибка получения информации из файла %s", filename);
-        perror("");
-        return 1;
-    }
-
-    const size_t SIZE_OF_FILE = file_info.st_size;
-    char* buffer = (char* )calloc(SIZE_OF_FILE + 1, sizeof(char));
-    assert(buffer != NULL);
-
-    if(read(file_descriptor, buffer, SIZE_OF_FILE) == -1){
-        fprintf(stderr, "Ошибка чтения файла %s", filename);
-        perror("");
-        return 1;
-    }
-
-    const size_t NUMBER_OF_LINES = CountLines(buffer, SIZE_OF_FILE);
-
-    char** poem = (char** )calloc(NUMBER_OF_LINES, sizeof(char*));
-    assert(poem != NULL);
-
-    DeleteEnterFromBuffer(buffer, SIZE_OF_FILE);
-    CopyFromBufferInRaggedArray(poem, buffer, SIZE_OF_FILE, NUMBER_OF_LINES);
-
+    const char* input_filename = "poem_orig.txt";
     const char* name_of_out_file = "new_poem_v2.txt";
-    FILE* out_file = fopen(name_of_out_file, "w");
-    if (out_file == NULL){
-        fprintf(stderr, "Ошибка откытия файла %s", name_of_out_file);
-        perror("");
-        return 1;
-    }
 
-    PrintRaggedArray(poem, NUMBER_OF_LINES, out_file);
-    free(poem);
-    poem = NULL;
-    free(buffer);
-    buffer = NULL;
-    fclose(out_file);
+    struct Struct_Poem Poem_Onegin = {};
+
+    if (SetPoemStructFromFile(&Poem_Onegin, input_filename)  == -1)
+        return 1;
+
+    if (PrintRaggedArray(&Poem_Onegin, name_of_out_file)  == -1)
+        return 1;
+
+    FreeDataPoem(&Poem_Onegin);
 }
 
-int CountLines(const char* buffer, size_t SIZE_OF_FILE){
-    assert(buffer != NULL);
+int SetPoemStructFromFile(struct Struct_Poem* Poem,
+                          const char* input_filename)
+{
+    int file_descriptor = open(input_filename, O_RDONLY);
+
+    if (file_descriptor == -1) {
+        fprintf(stderr, "Ошибка открытия файла |%s|", input_filename);
+        perror("");
+        return -1;
+    }
+
+    Poem->size_of_file = GetSizeOfFile(input_filename);
+
+    if (Poem->size_of_file == -1)
+        return -1;
+
+    Poem->buffer = (char* )calloc(Poem->size_of_file + 1, sizeof(char));
+    assert(Poem->buffer != NULL);
+
+    Poem->size_of_file = read(file_descriptor, Poem->buffer, Poem->size_of_file);
+
+    if(Poem->size_of_file == -1){
+        fprintf(stderr, "Ошибка чтения файла |%s|", input_filename);
+        perror("");
+        return -1;
+    }
+
+    Poem->buffer = (char* )realloc(Poem->buffer, Poem->size_of_file + 1);
+
+    Poem->number_of_lines = CountSymbol(Poem, '\n');
+
+    Poem->poem_ptr_array = (char** )calloc(Poem->number_of_lines, sizeof(char*));
+    assert(Poem->poem_ptr_array != NULL);
+
+
+    ReplaceSymbolInBuffer(Poem, '\n', '\0');
+    CopyFromBufferInRaggedArray(Poem);
+
+    close(file_descriptor);
+    return 0;
+}
+
+size_t CountSymbol(struct Struct_Poem* Poem, char sym)
+{
+    assert(Poem != NULL);
+    assert(Poem->buffer != NULL);
 
     int counter_enter = 0;
-    for (int i = 0; i < SIZE_OF_FILE; ++i){
-        if (buffer[i] == '\n')
+    for (int i = 0; i < Poem->size_of_file; ++i){
+        printf("[%d] - %c\n", (Poem->buffer)[i], (Poem->buffer)[i]);
+        if ((Poem->buffer)[i] == sym)
             counter_enter++;
     }
-    counter_enter--;
     return counter_enter;
 }
 
-void CopyFromBufferInRaggedArray(char** poem, char* buffer,
-                                 size_t SIZE_OF_FILE,
-                                 size_t NUMBER_OF_LINES)
+void CopyFromBufferInRaggedArray(struct Struct_Poem* Poem)
 {
-    assert(buffer != NULL);
-    assert(poem != NULL);
+    assert(Poem != NULL);
+    assert(Poem->buffer != NULL);
+    assert(Poem->poem_ptr_array != NULL);
 
-    char* now_ptr = buffer;
+    char* now_ptr = Poem->buffer;
     int buffer_index = 0;
     int poem_index = 0;
-    for (; poem_index < NUMBER_OF_LINES; ++buffer_index){
+    for (; poem_index < Poem->number_of_lines; ++buffer_index){
 
-        if (buffer[buffer_index] == '\0'){
-            poem[poem_index] = now_ptr;
+        if ((Poem->buffer)[buffer_index] == '\0'){
+            (Poem->poem_ptr_array)[poem_index] = now_ptr;
             poem_index++;
-            now_ptr = &buffer[buffer_index] + 1;
+            now_ptr = &(Poem->buffer)[buffer_index] + 1;
         }
     }
 }
 
-void DeleteEnterFromBuffer(char* buffer,
-                           size_t SIZE_OF_FILE)
+void ReplaceSymbolInBuffer(struct Struct_Poem* Poem,
+                           char sym1,
+                           char sym2)
 {
-    assert(buffer != NULL);
-    for (int i = 0; i < SIZE_OF_FILE; ++i){
-        if (buffer[i] == '\n')
-            buffer[i] = '\0';
+    assert(Poem != NULL);
+    assert(Poem->buffer != NULL);
+
+    for (int i = 0; i < Poem->size_of_file; ++i){
+        if ((Poem->buffer)[i] == sym1)
+            (Poem->buffer)[i] = sym2;
     }
 }
 
-void PrintRaggedArray(char** poem, size_t NUMBER_OF_LINES, FILE* out_file)
+ssize_t GetSizeOfFile(const char* filename)
 {
-    assert(poem != NULL);
-    assert(out_file != NULL);
+    struct stat file_info = {};
 
-    for (int i = 0; i < NUMBER_OF_LINES; ++i){
-        fputs(poem[i], out_file);
-        fputs("\n", out_file);
+    if (stat(filename, &file_info) == -1){
+        fprintf(stderr, "Ошибка получения информации из файла |%s|", filename);
+        perror("");
+        return -1;
     }
+    return file_info.st_size;
+}
+
+int PrintRaggedArray(struct Struct_Poem* Poem, const char* name_of_out_file)
+{
+    assert(Poem != NULL);
+    assert(Poem->buffer != NULL);
+    assert(Poem->poem_ptr_array != NULL);
+
+    FILE* out_file = fopen(name_of_out_file, "w");
+
+    if (out_file == NULL){
+        fprintf(stderr, "Ошибка откытия файла |%s|", name_of_out_file);
+        perror("");
+        return -1;
+    }
+
+    //printf("%d", Poem->number_of_lines);
+    for (int i = 0; i < Poem->number_of_lines; ++i)
+        fprintf(out_file, "%s\n", (Poem->poem_ptr_array)[i]);
+
+    fclose(out_file);
+}
+
+void FreeDataPoem(struct Struct_Poem* Poem)
+{
+    free(Poem->poem_ptr_array);
+    Poem->poem_ptr_array = NULL;
+
+    free(Poem->buffer);
+    Poem->buffer = NULL;
 }
