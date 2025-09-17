@@ -18,7 +18,9 @@ void ReplaceSymbolInBuffer(struct Struct_Poem* Poem,
                            char sym1,
                            char sym2);
 
-int PrintRaggedArray(struct Struct_Poem* Poem, const char* name_of_out_file);
+int PrintInFilePoem(struct Struct_Poem* Poem,
+                    FILE* out_file,
+                    const char* out_file_name);
 
 ssize_t GetSizeOfFile(const char* filename);
 
@@ -29,7 +31,8 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
 
 void FreeDataPoem(struct Struct_Poem* Poem);
 
-void BubbleSort(struct Struct_Poem* Poem);
+void BubbleSort(struct Struct_Poem* Poem,
+                int (*comparator)(char* str1, char* str2));
 
 int MyStrcmpByFirstChars(char* str1, char* str2);
 
@@ -43,19 +46,34 @@ size_t GetIndexFirstAlpha(char* str, const int start_point);
 
 int main(){
     const char* input_filename = "poem_orig.txt";
-    const char* name_of_out_file = "new_poem_v2.txt";
+    const char* out_file_name = "new_poem_v2.txt";
+    FILE* out_file = fopen(out_file_name, "w");
 
     struct Struct_Poem Poem_Onegin = {};
 
     if (SetPoemStructFromFile(&Poem_Onegin, input_filename)  == -1)
         return 1;
 
-    BubbleSort(&Poem_Onegin);
+    fprintf(out_file, "\n\n\n****************"
+                      "Sorting by beginning of line"
+                      "*******************\n\n\n");
 
-    if (PrintRaggedArray(&Poem_Onegin, name_of_out_file)  == -1)
+    BubbleSort(&Poem_Onegin, &MyStrcmpByFirstChars);
+
+    if (PrintInFilePoem(&Poem_Onegin, out_file, out_file_name)  == -1)
+        return 1;
+
+    fprintf(out_file, "\n\n\n****************"
+                      "Sorting by end of line"
+                      "*******************\n\n\n");
+
+    BubbleSort(&Poem_Onegin, &MyStrcmpByLastChars);
+
+    if (PrintInFilePoem(&Poem_Onegin, out_file, out_file_name)  == -1)
         return 1;
 
     FreeDataPoem(&Poem_Onegin);
+    fclose(out_file);
 }
 
 int SetPoemStructFromFile(struct Struct_Poem* Poem,
@@ -171,16 +189,16 @@ ssize_t GetSizeOfFile(const char* filename)
     return file_info.st_size;
 }
 
-int PrintRaggedArray(struct Struct_Poem* Poem, const char* name_of_out_file)
+int PrintInFilePoem(struct Struct_Poem* Poem,
+                    FILE* out_file,
+                    const char* out_file_name)
 {
     assert(Poem != NULL);
     assert(Poem->buffer != NULL);
     assert(Poem->poem_ptr_array != NULL);
 
-    FILE* out_file = fopen(name_of_out_file, "w");
-
     if (out_file == NULL){
-        fprintf(stderr, "Ошибка откытия файла |%s|", name_of_out_file);
+        fprintf(stderr, "Ошибка откытия файла |%s|", out_file_name);
         perror("");
         return -1;
     }
@@ -189,7 +207,6 @@ int PrintRaggedArray(struct Struct_Poem* Poem, const char* name_of_out_file)
     for (size_t i = 0; i < Poem->number_of_lines; ++i)
         fprintf(out_file, "%s\n", (Poem->poem_ptr_array)[i]);
 
-    fclose(out_file);
     return 0;
 }
 
@@ -202,14 +219,15 @@ void FreeDataPoem(struct Struct_Poem* Poem)
     Poem->buffer = NULL;
 }
 
-void BubbleSort(struct Struct_Poem* Poem)
+void BubbleSort(struct Struct_Poem* Poem,
+                int (*comparator)(char* str1, char* str2))
 {
     assert(Poem != NULL);
     assert(Poem->poem_ptr_array != NULL);
 
     for (size_t sorted_el = 0; sorted_el < Poem->number_of_lines; ++sorted_el) {
         for (size_t i = 0; i < Poem->number_of_lines - sorted_el - 1; ++i) {
-            if (MyStrcmpByLastChars(Poem->poem_ptr_array[i],
+            if ((*comparator)(Poem->poem_ptr_array[i],
                                     Poem->poem_ptr_array[i + 1]) > 0) {
                 SwapStrings(&(Poem->poem_ptr_array[i]),
                             &(Poem->poem_ptr_array[i + 1]));
