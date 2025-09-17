@@ -26,6 +26,12 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
 
 void FreeDataPoem(struct Struct_Poem* Poem);
 
+void BubbleSort(struct Struct_Poem* Poem);
+
+int MyStrcmp(char* str1, char* str2);
+
+void SwapStrings(char** str1, char** str2);
+
 int main(){
     const char* input_filename = "poem_orig.txt";
     const char* name_of_out_file = "new_poem_v2.txt";
@@ -34,6 +40,8 @@ int main(){
 
     if (SetPoemStructFromFile(&Poem_Onegin, input_filename)  == -1)
         return 1;
+
+    BubbleSort(&Poem_Onegin);
 
     if (PrintRaggedArray(&Poem_Onegin, name_of_out_file)  == -1)
         return 1;
@@ -48,6 +56,7 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
 
     if (file_descriptor == -1) {
         fprintf(stderr, "Ошибка открытия файла |%s|", input_filename);
+        close(file_descriptor);
         perror("");
         return -1;
     }
@@ -64,6 +73,7 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
 
     if(Poem->size_of_file == -1){
         fprintf(stderr, "Ошибка чтения файла |%s|", input_filename);
+        close(file_descriptor);
         perror("");
         return -1;
     }
@@ -75,6 +85,7 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
         Poem->buffer = NULL;
         fprintf(stderr, "Ошибка выделения памяти");
         perror("");
+        close(file_descriptor);
         return -1;
     }
 
@@ -114,8 +125,8 @@ void CopyFromBufferInRaggedArray(struct Struct_Poem* Poem)
     assert(Poem->poem_ptr_array != NULL);
 
     char* now_ptr = Poem->buffer;
-    int buffer_index = 0;
-    int poem_index = 0;
+    size_t buffer_index = 0;
+    size_t poem_index = 0;
     for (; poem_index < Poem->number_of_lines; ++buffer_index){
 
         if ((Poem->buffer)[buffer_index] == '\0'){
@@ -166,10 +177,11 @@ int PrintRaggedArray(struct Struct_Poem* Poem, const char* name_of_out_file)
     }
 
     //printf("%d", Poem->number_of_lines);
-    for (int i = 0; i < Poem->number_of_lines; ++i)
+    for (size_t i = 0; i < Poem->number_of_lines; ++i)
         fprintf(out_file, "%s\n", (Poem->poem_ptr_array)[i]);
 
     fclose(out_file);
+    return 0;
 }
 
 void FreeDataPoem(struct Struct_Poem* Poem)
@@ -179,4 +191,74 @@ void FreeDataPoem(struct Struct_Poem* Poem)
 
     free(Poem->buffer);
     Poem->buffer = NULL;
+}
+
+void BubbleSort(struct Struct_Poem* Poem)
+{
+    assert(Poem != NULL);
+    assert(Poem->poem_ptr_array != NULL);
+
+    for (size_t sorted_el = 0; sorted_el < Poem->number_of_lines; ++sorted_el) {
+        for (size_t i = 0; i < Poem->number_of_lines - sorted_el - 1; ++i) {
+            if (MyStrcmp(Poem->poem_ptr_array[i],
+                         Poem->poem_ptr_array[i + 1]) > 0) {
+                SwapStrings(&(Poem->poem_ptr_array[i]),
+                            &(Poem->poem_ptr_array[i + 1]));
+            }
+        }
+    }
+}
+
+void SwapStrings(char** str1, char** str2)
+{
+    assert(*str1 != NULL);
+    assert(*str2 != NULL);
+
+    char* twin_ptr = *str1;
+    *str1 = *str2;
+    *str2 = twin_ptr;
+}
+                                     // 1 == 2 -> 0
+int MyStrcmp(char* str1, char* str2) // 1 > 2 -> 1
+{                                    // 1 < 2 -> -1
+    assert(str1 != NULL);
+    assert(str2 != NULL);
+
+    size_t index_s1 = 0;
+    size_t index_s2 = 0;
+
+    while (!isalpha(str1[index_s1]))
+            index_s1++;
+
+    while (!isalpha(str2[index_s2]))
+            index_s2++;
+
+    while (true) {
+        if (str1[index_s1] == '\0' && str2[index_s2] != '\0')
+            return -1;
+
+        if (str1[index_s1] != '\0' && str2[index_s2] == '\0')
+            return 1;
+
+        if (!isalpha(str1[index_s1])){
+            index_s1++;
+            continue;
+        }
+
+        if (!isalpha(str2[index_s2])){
+            index_s2++;
+            continue;
+        }
+
+        if (tolower(str1[index_s1]) - 'a' < tolower(str2[index_s2]) - 'a')
+            return -1;                    // english 'a'
+
+        else if (tolower(str1[index_s1]) - 'a' > tolower(str2[index_s2]) - 'a')
+            return 1;                     // english 'a'
+
+        index_s1++;
+        index_s2++;
+    }
+
+    return 0;
 }
