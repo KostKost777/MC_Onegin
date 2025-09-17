@@ -2,6 +2,9 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+const int BEGINOFLINE = 0;
+const int ENDOFLINE = 1;
+
 struct Struct_Poem{
     char* buffer;
     char** poem_ptr_array;
@@ -28,9 +31,15 @@ void FreeDataPoem(struct Struct_Poem* Poem);
 
 void BubbleSort(struct Struct_Poem* Poem);
 
-int MyStrcmp(char* str1, char* str2);
+int MyStrcmpByFirstChars(char* str1, char* str2);
 
 void SwapStrings(char** str1, char** str2);
+
+int MyStrcmpByLastChars(char* str1, char* str2);
+
+size_t LineEndIndex(char* str);
+
+size_t GetIndexFirstAlpha(char* str, const int start_point);
 
 int main(){
     const char* input_filename = "poem_orig.txt";
@@ -111,7 +120,7 @@ size_t CountSymbol(struct Struct_Poem* Poem, char sym)
 
     int counter_enter = 0;
     for (int i = 0; i < Poem->size_of_file; ++i){
-        printf("[%d] - %c\n", (Poem->buffer)[i], (Poem->buffer)[i]);
+       // printf("[%d] - %c\n", (Poem->buffer)[i], (Poem->buffer)[i]);
         if ((Poem->buffer)[i] == sym)
             counter_enter++;
     }
@@ -200,8 +209,8 @@ void BubbleSort(struct Struct_Poem* Poem)
 
     for (size_t sorted_el = 0; sorted_el < Poem->number_of_lines; ++sorted_el) {
         for (size_t i = 0; i < Poem->number_of_lines - sorted_el - 1; ++i) {
-            if (MyStrcmp(Poem->poem_ptr_array[i],
-                         Poem->poem_ptr_array[i + 1]) > 0) {
+            if (MyStrcmpByLastChars(Poem->poem_ptr_array[i],
+                                    Poem->poem_ptr_array[i + 1]) > 0) {
                 SwapStrings(&(Poem->poem_ptr_array[i]),
                             &(Poem->poem_ptr_array[i + 1]));
             }
@@ -218,22 +227,41 @@ void SwapStrings(char** str1, char** str2)
     *str1 = *str2;
     *str2 = twin_ptr;
 }
-                                     // 1 == 2 -> 0
-int MyStrcmp(char* str1, char* str2) // 1 > 2 -> 1
-{                                    // 1 < 2 -> -1
+
+size_t GetIndexFirstAlpha(char* str, const int start_point)
+{
+    assert(str != NULL);
+
+    size_t index = 0;
+    switch(start_point) {
+        case BEGINOFLINE:
+            while (!isalpha(str[index]))
+                index++;
+            break;
+
+        case ENDOFLINE:
+            index = LineEndIndex(str);
+
+            while (!isalpha(str[index]))
+                index--;
+            break;
+
+        default:
+            break;
+    }
+    return index;
+}
+                                                // 1 == 2 -> 0
+int MyStrcmpByFirstChars(char* str1, char* str2) // 1 > 2 -> 1
+{                                               // 1 < 2 -> -1
     assert(str1 != NULL);
     assert(str2 != NULL);
 
-    size_t index_s1 = 0;
-    size_t index_s2 = 0;
+    size_t index_s1 = GetIndexFirstAlpha(str1, BEGINOFLINE);
+    size_t index_s2 = GetIndexFirstAlpha(str2, BEGINOFLINE);
 
-    while (!isalpha(str1[index_s1]))
-            index_s1++;
+    while (str1[index_s1] != '\0' && str2[index_s2] != '\0') {
 
-    while (!isalpha(str2[index_s2]))
-            index_s2++;
-
-    while (true) {
         if (str1[index_s1] == '\0' && str2[index_s2] != '\0')
             return -1;
 
@@ -258,6 +286,54 @@ int MyStrcmp(char* str1, char* str2) // 1 > 2 -> 1
 
         index_s1++;
         index_s2++;
+    }
+
+    return 0;
+}
+
+size_t LineEndIndex(char* str){
+    assert(str != NULL);
+
+    size_t end_index = 0;
+    for (; str[end_index] != '\0'; end_index++)
+        continue;
+    return --end_index;
+}
+                                                // 1 == 2 -> 0
+int MyStrcmpByLastChars(char* str1, char* str2) // 1 > 2 -> 1
+{                                               // 1 < 2 -> -1
+    assert(str1 != NULL);
+    assert(str2 != NULL);
+
+    size_t index_s1 = GetIndexFirstAlpha(str1, ENDOFLINE);
+    size_t index_s2 = GetIndexFirstAlpha(str2, ENDOFLINE);
+
+    while (index_s1 != 0 && index_s2 != 0) {
+
+        if (index_s1 == 0 && index_s2 != 0)
+            return -1;
+
+        if (index_s1 != 0 && index_s2 == 0)
+            return 1;
+
+        if (!isalpha(str1[index_s1])){
+            index_s1--;
+            continue;
+        }
+
+        if (!isalpha(str2[index_s2])){
+            index_s2--;
+            continue;
+        }
+
+        if (tolower(str1[index_s1]) - 'a' < tolower(str2[index_s2]) - 'a')
+            return -1;                    // english 'a'
+
+        else if (tolower(str1[index_s1]) - 'a' > tolower(str2[index_s2]) - 'a')
+            return 1;                     // english 'a'
+
+        index_s1--;
+        index_s2--;
     }
 
     return 0;
