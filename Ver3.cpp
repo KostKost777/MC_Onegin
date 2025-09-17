@@ -68,7 +68,17 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
         return -1;
     }
 
-    Poem->buffer = (char* )realloc(Poem->buffer, Poem->size_of_file + 1);
+    char* ptr_check = (char* )realloc(Poem->buffer, Poem->size_of_file + 1);
+
+    if (ptr_check == NULL) {
+        free(Poem->buffer);
+        Poem->buffer = NULL;
+        fprintf(stderr, "Ошибка выделения памяти");
+        perror("");
+        return -1;
+    }
+
+    Poem->buffer = ptr_check;
 
     Poem->number_of_lines = CountSymbol(Poem, '\n');
 
