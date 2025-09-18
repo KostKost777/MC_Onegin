@@ -22,7 +22,7 @@ struct Struct_Poem{
     size_t number_of_lines;
 };
 
-void CopyFromBufferInRaggedArray(struct Struct_Poem* Poem);
+void CopyFromBufferInPtrArray(struct Struct_Poem* Poem);
 
 void ReplaceSymbolInBuffer(struct Struct_Poem* Poem,
                            char sym1,
@@ -137,7 +137,7 @@ int ReadPoemStructFromFile(struct Struct_Poem* Poem,
     assert(Poem->poem_ptr_array != NULL);
 
     //ReplaceSymbolInBuffer(Poem, '\n', '\0');
-    CopyFromBufferInRaggedArray(Poem);
+    CopyFromBufferInPtrArray(Poem);
     /*
     for (int i = 0;i < Poem->number_of_lines; ++i) {
         printf("%s\n", Poem->poem_ptr_array[i].line_ptr);
@@ -162,7 +162,7 @@ size_t CountSymbol(struct Struct_Poem* Poem, char sym)
     return counter_enter;
 }
 
-void CopyFromBufferInRaggedArray(struct Struct_Poem* Poem)
+void CopyFromBufferInPtrArray(struct Struct_Poem* Poem)
 {
     assert(Poem != NULL);
     assert(Poem->buffer != NULL);
