@@ -124,19 +124,7 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
         perror("");
         return -1;
     }
-    //printf("%d\n", Poem->size_of_file);
-    char* ptr_check = (char* )realloc(Poem->buffer, Poem->size_of_file + 1);
-
-    if (ptr_check == NULL) {
-        free(Poem->buffer);
-        Poem->buffer = NULL;
-        fprintf(stderr, "Memory allocation error");
-        perror("");
-        close(file_descriptor);
-        return -1;
-    }
-
-    Poem->buffer = ptr_check;
+//    printf("%d\n", Poem->size_of_file);
 
     Poem->number_of_lines = CountSymbol(Poem, '\n');
 
@@ -193,6 +181,7 @@ void CopyFromBufferInRaggedArray(struct Struct_Poem* Poem)
             line_begin_ptr = now_ptr + 1;
         }
     }
+    *line_begin_ptr = '\0';
 }
 
 void ReplaceSymbolInBuffer(struct Struct_Poem* Poem,
@@ -245,6 +234,10 @@ int PrintInFilePoem(struct Struct_Poem* Poem,
 
 void FreeDataPoem(struct Struct_Poem* Poem)
 {
+    assert(Poem);
+    assert(Poem->poem_ptr_array);
+    assert(Poem->buffer);
+
     free(Poem->poem_ptr_array);
     Poem->poem_ptr_array = NULL;
 
