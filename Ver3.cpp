@@ -1,4 +1,9 @@
-#include <TXLib.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <assert.h>
+#include <ctype.h>
 #include <sys/stat.h>
 #include <errno.h>
 
@@ -82,7 +87,7 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
     int file_descriptor = open(input_filename, O_RDONLY);
 
     if (file_descriptor == -1) {
-        fprintf(stderr, "Ошибка открытия файла |%s|", input_filename);
+        fprintf(stderr, "Error opening file |%s|", input_filename);
         close(file_descriptor);
         perror("");
         return -1;
@@ -99,7 +104,7 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
     Poem->size_of_file = read(file_descriptor, Poem->buffer, Poem->size_of_file);
 
     if(Poem->size_of_file == -1){
-        fprintf(stderr, "Ошибка чтения файла |%s|", input_filename);
+        fprintf(stderr, "Error reading file |%s|", input_filename);
         close(file_descriptor);
         perror("");
         return -1;
@@ -110,7 +115,7 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
     if (ptr_check == NULL) {
         free(Poem->buffer);
         Poem->buffer = NULL;
-        fprintf(stderr, "Ошибка выделения памяти");
+        fprintf(stderr, "Memory allocation error");
         perror("");
         close(file_descriptor);
         return -1;
@@ -198,7 +203,7 @@ int PrintInFilePoem(struct Struct_Poem* Poem,
     assert(Poem->poem_ptr_array != NULL);
 
     if (out_file == NULL){
-        fprintf(stderr, "Ошибка откытия файла |%s|", out_file_name);
+        fprintf(stderr, "Error opening file |%s|", out_file_name);
         perror("");
         return -1;
     }
