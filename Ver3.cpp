@@ -59,6 +59,7 @@ int QsortLineEndsComparator(const void* param1,
 int main(){
     const char* input_filename = "poem_orig.txt";
     const char* out_file_name = "new_poem_v2.txt";
+
     FILE* out_file = fopen(out_file_name, "w");
 
     struct Struct_Poem Poem_Onegin = {};
@@ -98,7 +99,7 @@ int main(){
 }
 
 int ReadPoemStructFromFile(struct Struct_Poem* Poem,
-                          const char* input_filename)
+                           const char* input_filename)
 {
     assert(Poem != NULL);
     assert(input_filename != NULL);
