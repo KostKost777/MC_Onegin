@@ -9,7 +9,6 @@
 
 typedef int (*Compare_Func_t)(struct Struct_Line str1,
                               struct Struct_Line str2);
-
 struct Struct_Line{
     char* line_ptr;
     size_t str_len;
@@ -22,42 +21,40 @@ struct Struct_Poem{
     size_t number_of_lines;
 };
 
+int ReadPoemStructFromFile(struct Struct_Poem* Poem,
+                           const char* input_filename);
+
+size_t CountSymbol(struct Struct_Poem* Poem, char sym);
+
 void CopyFromBufferInPtrArray(struct Struct_Poem* Poem);
 
 void ReplaceSymbolInBuffer(struct Struct_Poem* Poem,
                            char sym1,
                            char sym2);
 
-int PrintInFilePoem(struct Struct_Poem* Poem,
-                    FILE* out_file,
-                    const char* out_file_name);
-
 ssize_t GetSizeOfFile(const char* filename);
 
-size_t CountSymbol(struct Struct_Poem* Poem, char sym);
-
-int ReadPoemStructFromFile(struct Struct_Poem* Poem,
-                          const char* input_filename);
+int PrintPoemInFile(struct Struct_Poem* Poem,
+                    FILE* out_file,
+                    const char* out_file_name);
 
 void FreeDataPoem(struct Struct_Poem* Poem);
 
 void BubbleSort(struct Struct_Poem* Poem,
                 Compare_Func_t Comparator);
 
-int CompareByFirstChars(struct Struct_Line str1,
-                         struct Struct_Line str2);
-
 void SwapStrings(struct Struct_Line* str1,
                  struct Struct_Line* str2);
-
-int CompareByLastChars(struct Struct_Line str1,
-                        struct Struct_Line str2);
-
-size_t GetLineEndIndex(char* str);
 
 size_t GoForward(struct Struct_Line str);
 
 size_t GoBackwards(struct Struct_Line str);
+
+int CompareByFirstChars(struct Struct_Line str1,
+                        struct Struct_Line str2);
+
+int QsortLineEndsComparator(const void* param1,
+                            const void* param2);
 
 int main(){
     const char* input_filename = "poem_orig.txt";
@@ -75,16 +72,19 @@ int main(){
 
     BubbleSort(&Poem_Onegin, &CompareByFirstChars);
 
-    if (PrintInFilePoem(&Poem_Onegin, out_file, out_file_name)  == -1)
+    if (PrintPoemInFile(&Poem_Onegin, out_file, out_file_name)  == -1)
         return 1;
 
     fprintf(out_file, "\n\n\n****************"
                       "Sorting by end of line"
                       "*******************\n\n\n");
 
-    BubbleSort(&Poem_Onegin, &CompareByLastChars);
+    qsort(Poem_Onegin.poem_ptr_array,
+          Poem_Onegin.number_of_lines,
+          sizeof(struct Struct_Line),
+          &QsortLineEndsComparator);
 
-    if (PrintInFilePoem(&Poem_Onegin, out_file, out_file_name)  == -1)
+    if (PrintPoemInFile(&Poem_Onegin, out_file, out_file_name)  == -1)
         return 1;
 
     fprintf(out_file, "\n\n\n****************"
@@ -215,7 +215,7 @@ ssize_t GetSizeOfFile(const char* filename)
     return file_info.st_size;
 }
 
-int PrintInFilePoem(struct Struct_Poem* Poem,
+int PrintPoemInFile(struct Struct_Poem* Poem,
                     FILE* out_file,
                     const char* out_file_name)
 {
@@ -260,7 +260,7 @@ void BubbleSort(struct Struct_Poem* Poem,
     for (size_t sorted_el = 0; sorted_el < Poem->number_of_lines; ++sorted_el) {
         for (size_t i = 0; i < Poem->number_of_lines - sorted_el - 1; ++i) {
             if (Comparator(Poem->poem_ptr_array[i],
-                              Poem->poem_ptr_array[i + 1]) > 0) {
+                           Poem->poem_ptr_array[i + 1]) > 0) {
 
                 SwapStrings(&Poem->poem_ptr_array[i],
                             &Poem->poem_ptr_array[i + 1]);
@@ -291,6 +291,7 @@ size_t GoForward(struct Struct_Line str)
     size_t index = 0;
     while (!isalpha(str.line_ptr[index]))
             index++;
+
     return index;
 }
 
@@ -301,11 +302,13 @@ size_t GoBackwards(struct Struct_Line str)
     size_t index = str.str_len - 1;
     while (!isalpha(str.line_ptr[index]))
             index--;
+
+    return index;
 }
-                                                    // 1 == 2 -> 0
-int CompareByFirstChars(struct Struct_Line str1,
-                         struct Struct_Line str2)  // 1 > 2 -> 1
-{                                                   // 1 < 2 -> -1
+
+int CompareByFirstChars(struct Struct_Line str1,  // 1 == 2 -> 0
+                        struct Struct_Line str2)  // 1 > 2 -> 1
+{                                                 // 1 < 2 -> -1
     assert(str1.line_ptr != NULL);
     assert(str2.line_ptr != NULL);
 
@@ -314,10 +317,12 @@ int CompareByFirstChars(struct Struct_Line str1,
 
     while (str1.line_ptr[index_s1] != '\n' && str2.line_ptr[index_s2] != '\n') {
 
-        if (str1.line_ptr[index_s1] == '\n' && str2.line_ptr[index_s2] != '\n')
+        if (str1.line_ptr[index_s1] == '\n' &&
+            str2.line_ptr[index_s2] != '\n')
             return -1;
 
-        if (str1.line_ptr[index_s1] != '\n' && str2.line_ptr[index_s2] == '\n')
+        if (str1.line_ptr[index_s1] != '\n' &&
+            str2.line_ptr[index_s2] == '\n')
             return 1;
 
         if (!isalpha(str1.line_ptr[index_s1])) {
@@ -331,7 +336,7 @@ int CompareByFirstChars(struct Struct_Line str1,
         }
 
         if (tolower(str1.line_ptr[index_s1]) - 'a' <
-                    tolower(str2.line_ptr[index_s2]) - 'a')
+            tolower(str2.line_ptr[index_s2]) - 'a')
             return -1;                                      // english 'a'
 
         else if (tolower(str1.line_ptr[index_s1]) - 'a' >
@@ -345,23 +350,19 @@ int CompareByFirstChars(struct Struct_Line str1,
     return 0;
 }
 
-size_t GetLineEndIndex(char* str){
-    assert(str != NULL);
+int QsortLineEndsComparator(const void* param1, const void* param2) // 1 == 2 -> 0
+{                                                                   // 1 > 2 -> 1
+    assert(param1 != NULL);                                         // 1 < 2 -> -1
+    assert(param2 != NULL);
 
-    size_t end_index = 0;
-    for (; str[end_index] != '\0'; end_index++)
-        continue;
-    return --end_index;
-}
-                                                 // 1 == 2 -> 0
-int CompareByLastChars(struct Struct_Line str1,
-                       struct Struct_Line str2) // 1 > 2 -> 1
-{                                                // 1 < 2 -> -1
-    assert(str1.line_ptr != NULL);
-    assert(str2.line_ptr != NULL);
+    const struct Struct_Line* str1 = (const struct Struct_Line*)param1;
+    const struct Struct_Line* str2 = (const struct Struct_Line*)param2;
 
-    size_t index_s1 = GoBackwards(str1);
-    size_t index_s2 = GoBackwards(str2);
+    assert(str1->line_ptr != NULL);
+    assert(str2->line_ptr != NULL);
+
+    size_t index_s1 = GoBackwards(*str1);
+    size_t index_s2 = GoBackwards(*str2);
 
     while (index_s1 != 0 && index_s2 != 0) {
 
@@ -371,22 +372,22 @@ int CompareByLastChars(struct Struct_Line str1,
         if (index_s1 != 0 && index_s2 == 0)
             return 1;
 
-        if (!isalpha(str1.line_ptr[index_s1])) {
+        if (!isalpha(str1->line_ptr[index_s1])) {
             index_s1--;
             continue;
         }
 
-        if (!isalpha(str2.line_ptr[index_s2])) {
+        if (!isalpha(str2->line_ptr[index_s2])) {
             index_s2--;
             continue;
         }
 
-        if (tolower(str1.line_ptr[index_s1]) - 'a' <
-            tolower(str2.line_ptr[index_s2]) - 'a')
+        if (tolower(str1->line_ptr[index_s1]) - 'a' <
+            tolower(str2->line_ptr[index_s2]) - 'a')
             return -1;                                      // english 'a'
 
-        else if (tolower(str1.line_ptr[index_s1]) - 'a' >
-                 tolower(str2.line_ptr[index_s2]) - 'a')
+        else if (tolower(str1->line_ptr[index_s1]) - 'a' >
+                 tolower(str2->line_ptr[index_s2]) - 'a')
             return 1;                                       // english 'a'
 
         index_s1--;
