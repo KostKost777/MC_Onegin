@@ -10,9 +10,14 @@
 const int BEGINOFLINE = 0;
 const int ENDOFLINE = 1;
 
+struct Struct_Line{
+    char* line_ptr;
+    int str_len;
+};
+
 struct Struct_Poem{
     char* buffer;
-    char** poem_ptr_array;
+    struct Struct_Line* poem_ptr_array;
     ssize_t size_of_file;
     size_t number_of_lines;
 };
@@ -37,13 +42,17 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
 void FreeDataPoem(struct Struct_Poem* Poem);
 
 void BubbleSort(struct Struct_Poem* Poem,
-                int (*comparator)(char* str1, char* str2));
+                int (*comparator)(struct Struct_Line str1,
+                                  struct Struct_Line str2));
 
-int MyStrcmpByFirstChars(char* str1, char* str2);
+int MyStrcmpByFirstChars(struct Struct_Line str1,
+                         struct Struct_Line str2);
 
-void SwapStrings(char** str1, char** str2);
+void SwapStrings(struct Struct_Line* str1,
+                 struct Struct_Line* str2);
 
-int MyStrcmpByLastChars(char* str1, char* str2);
+int MyStrcmpByLastChars(struct Struct_Line str1,
+                         struct Struct_Line str2);
 
 size_t LineEndIndex(char* str);
 
@@ -77,6 +86,12 @@ int main(){
     if (PrintInFilePoem(&Poem_Onegin, out_file, out_file_name)  == -1)
         return 1;
 
+    fprintf(out_file, "\n\n\n****************"
+                      "Original Poem"
+                      "*******************\n\n\n");
+
+    fprintf(out_file, Poem_Onegin.buffer);
+
     FreeDataPoem(&Poem_Onegin);
     fclose(out_file);
 }
@@ -100,7 +115,7 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
 
     Poem->buffer = (char* )calloc(Poem->size_of_file + 1, sizeof(char));
     assert(Poem->buffer != NULL);
-
+    //printf("%d\n", Poem->size_of_file);
     Poem->size_of_file = read(file_descriptor, Poem->buffer, Poem->size_of_file);
 
     if(Poem->size_of_file == -1){
@@ -109,7 +124,7 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
         perror("");
         return -1;
     }
-
+    //printf("%d\n", Poem->size_of_file);
     char* ptr_check = (char* )realloc(Poem->buffer, Poem->size_of_file + 1);
 
     if (ptr_check == NULL) {
@@ -125,12 +140,16 @@ int SetPoemStructFromFile(struct Struct_Poem* Poem,
 
     Poem->number_of_lines = CountSymbol(Poem, '\n');
 
-    Poem->poem_ptr_array = (char** )calloc(Poem->number_of_lines, sizeof(char*));
+    Poem->poem_ptr_array = (struct Struct_Line*)calloc(Poem->number_of_lines, sizeof(struct Struct_Line));
     assert(Poem->poem_ptr_array != NULL);
 
-
-    ReplaceSymbolInBuffer(Poem, '\n', '\0');
+    //ReplaceSymbolInBuffer(Poem, '\n', '\0');
     CopyFromBufferInRaggedArray(Poem);
+    /*
+    for (int i = 0;i < Poem->number_of_lines; ++i) {
+        printf("%s\n", Poem->poem_ptr_array[i].line_ptr);
+    }
+    */
 
     close(file_descriptor);
     return 0;
@@ -156,15 +175,22 @@ void CopyFromBufferInRaggedArray(struct Struct_Poem* Poem)
     assert(Poem->buffer != NULL);
     assert(Poem->poem_ptr_array != NULL);
 
-    char* now_ptr = Poem->buffer;
+    char* line_begin_ptr = Poem->buffer;
+    char* now_ptr = NULL;
     size_t buffer_index = 0;
     size_t poem_index = 0;
     for (; poem_index < Poem->number_of_lines; ++buffer_index){
+        //printf("%d\n", (Poem->buffer)[buffer_index]);
+        if ((Poem->buffer)[buffer_index] == '\n'){
+            now_ptr = &(Poem->buffer)[buffer_index];
+            (Poem->poem_ptr_array[poem_index].line_ptr) = line_begin_ptr;
 
-        if ((Poem->buffer)[buffer_index] == '\0'){
-            (Poem->poem_ptr_array)[poem_index] = now_ptr;
+            (Poem->poem_ptr_array[poem_index].str_len) =
+            now_ptr - line_begin_ptr;
+
+            //printf("%s\n", line_begin_ptr);
             poem_index++;
-            now_ptr = &(Poem->buffer)[buffer_index] + 1;
+            line_begin_ptr = now_ptr + 1;
         }
     }
 }
@@ -209,9 +235,11 @@ int PrintInFilePoem(struct Struct_Poem* Poem,
     }
 
     //printf("%d", Poem->number_of_lines);
-    for (size_t i = 0; i < Poem->number_of_lines; ++i)
-        fprintf(out_file, "%s\n", (Poem->poem_ptr_array)[i]);
-
+    for (size_t i = 0; i < Poem->number_of_lines; ++i){
+        fprintf(out_file, "%.*s",
+                Poem->poem_ptr_array[i].str_len + 1,
+                Poem->poem_ptr_array[i].line_ptr);
+    }
     return 0;
 }
 
@@ -225,15 +253,17 @@ void FreeDataPoem(struct Struct_Poem* Poem)
 }
 
 void BubbleSort(struct Struct_Poem* Poem,
-                int (*comparator)(char* str1, char* str2))
+                int (*comparator)(struct Struct_Line str1,
+                                  struct Struct_Line str2))
 {
     assert(Poem != NULL);
     assert(Poem->poem_ptr_array != NULL);
 
     for (size_t sorted_el = 0; sorted_el < Poem->number_of_lines; ++sorted_el) {
         for (size_t i = 0; i < Poem->number_of_lines - sorted_el - 1; ++i) {
-            if ((*comparator)(Poem->poem_ptr_array[i],
-                                    Poem->poem_ptr_array[i + 1]) > 0) {
+            if ((*comparator)((Poem->poem_ptr_array)[i],
+                              (Poem->poem_ptr_array)[i + 1]) > 0) {
+
                 SwapStrings(&(Poem->poem_ptr_array[i]),
                             &(Poem->poem_ptr_array[i + 1]));
             }
@@ -241,31 +271,35 @@ void BubbleSort(struct Struct_Poem* Poem,
     }
 }
 
-void SwapStrings(char** str1, char** str2)
+void SwapStrings(struct Struct_Line* str1,
+                 struct Struct_Line* str2)
 {
-    assert(*str1 != NULL);
-    assert(*str2 != NULL);
+    assert(str1->line_ptr != NULL);
+    assert(str2->line_ptr != NULL);
 
-    char* twin_ptr = *str1;
-    *str1 = *str2;
-    *str2 = twin_ptr;
+    char* twin_ptr = str1->line_ptr;
+    str1->line_ptr = str2->line_ptr;
+    str2->line_ptr = twin_ptr;
+
+    int twin_len = str1->str_len;
+    str1->str_len = str2->str_len;
+    str2->str_len = twin_len;
 }
 
-size_t GetIndexFirstAlpha(char* str, const int start_point)
+size_t GetIndexFirstAlpha(struct Struct_Line str, const int start_point)
 {
-    assert(str != NULL);
+    assert(str.line_ptr != NULL);
 
     size_t index = 0;
     switch(start_point) {
         case BEGINOFLINE:
-            while (!isalpha(str[index]))
+            while (!isalpha(str.line_ptr[index]))
                 index++;
             break;
 
         case ENDOFLINE:
-            index = LineEndIndex(str);
-
-            while (!isalpha(str[index]))
+            index = str.str_len - 1;
+            while (!isalpha(str.line_ptr[index]))
                 index--;
             break;
 
@@ -274,37 +308,38 @@ size_t GetIndexFirstAlpha(char* str, const int start_point)
     }
     return index;
 }
-                                                // 1 == 2 -> 0
-int MyStrcmpByFirstChars(char* str1, char* str2) // 1 > 2 -> 1
-{                                               // 1 < 2 -> -1
-    assert(str1 != NULL);
-    assert(str2 != NULL);
+                                                    // 1 == 2 -> 0
+int MyStrcmpByFirstChars(struct Struct_Line str1,
+                         struct Struct_Line str2)  // 1 > 2 -> 1
+{                                                   // 1 < 2 -> -1
+    assert(str1.line_ptr != NULL);
+    assert(str2.line_ptr != NULL);
 
     size_t index_s1 = GetIndexFirstAlpha(str1, BEGINOFLINE);
     size_t index_s2 = GetIndexFirstAlpha(str2, BEGINOFLINE);
 
-    while (str1[index_s1] != '\0' && str2[index_s2] != '\0') {
+    while (str1.line_ptr[index_s1] != '\n' && str2.line_ptr[index_s2] != '\n') {
 
-        if (str1[index_s1] == '\0' && str2[index_s2] != '\0')
+        if (str1.line_ptr[index_s1] == '\n' && str2.line_ptr[index_s2] != '\n')
             return -1;
 
-        if (str1[index_s1] != '\0' && str2[index_s2] == '\0')
+        if (str1.line_ptr[index_s1] != '\n' && str2.line_ptr[index_s2] == '\n')
             return 1;
 
-        if (!isalpha(str1[index_s1])){
+        if (!isalpha(str1.line_ptr[index_s1])){
             index_s1++;
             continue;
         }
 
-        if (!isalpha(str2[index_s2])){
+        if (!isalpha(str2.line_ptr[index_s2])){
             index_s2++;
             continue;
         }
 
-        if (tolower(str1[index_s1]) - 'a' < tolower(str2[index_s2]) - 'a')
+        if (tolower(str1.line_ptr[index_s1]) - 'a' < tolower(str2.line_ptr[index_s2]) - 'a')
             return -1;                    // english 'a'
 
-        else if (tolower(str1[index_s1]) - 'a' > tolower(str2[index_s2]) - 'a')
+        else if (tolower(str1.line_ptr[index_s1]) - 'a' > tolower(str2.line_ptr[index_s2]) - 'a')
             return 1;                     // english 'a'
 
         index_s1++;
@@ -322,11 +357,12 @@ size_t LineEndIndex(char* str){
         continue;
     return --end_index;
 }
-                                                // 1 == 2 -> 0
-int MyStrcmpByLastChars(char* str1, char* str2) // 1 > 2 -> 1
-{                                               // 1 < 2 -> -1
-    assert(str1 != NULL);
-    assert(str2 != NULL);
+                                                 // 1 == 2 -> 0
+int MyStrcmpByLastChars(struct Struct_Line str1,
+                        struct Struct_Line str2) // 1 > 2 -> 1
+{                                                // 1 < 2 -> -1
+    assert(str1.line_ptr != NULL);
+    assert(str2.line_ptr != NULL);
 
     size_t index_s1 = GetIndexFirstAlpha(str1, ENDOFLINE);
     size_t index_s2 = GetIndexFirstAlpha(str2, ENDOFLINE);
@@ -339,20 +375,20 @@ int MyStrcmpByLastChars(char* str1, char* str2) // 1 > 2 -> 1
         if (index_s1 != 0 && index_s2 == 0)
             return 1;
 
-        if (!isalpha(str1[index_s1])){
+        if (!isalpha(str1.line_ptr[index_s1])){
             index_s1--;
             continue;
         }
 
-        if (!isalpha(str2[index_s2])){
+        if (!isalpha(str2.line_ptr[index_s2])){
             index_s2--;
             continue;
         }
 
-        if (tolower(str1[index_s1]) - 'a' < tolower(str2[index_s2]) - 'a')
+        if (tolower(str1.line_ptr[index_s1]) - 'a' < tolower(str2.line_ptr[index_s2]) - 'a')
             return -1;                    // english 'a'
 
-        else if (tolower(str1[index_s1]) - 'a' > tolower(str2[index_s2]) - 'a')
+        else if (tolower(str1.line_ptr[index_s1]) - 'a' > tolower(str2.line_ptr[index_s2]) - 'a')
             return 1;                     // english 'a'
 
         index_s1--;
